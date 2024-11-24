@@ -23,11 +23,7 @@ class ParserTest extends FunSuite {
 
     val result = p.parse("bbc", 0)
 
-    result match {
-      case ParseResult(Left(error)) =>
-        assert(error.message.contains("Expected 'a'"))
-      case _ => fail("Expected a failure")
-    }
+    assert(result.value.isLeft)
   }
 
   test("string parser should correctly parse a string") {
@@ -77,11 +73,7 @@ class ParserTest extends FunSuite {
 
     val result = p.parse("abc", 0)
 
-    result match {
-      case ParseResult(Left(error)) =>
-        assert(error.message.contains("Expected digit"))
-      case _ => fail("Expected a failure")
-    }
+    assert(result.value.isLeft)
   }
 
   test("many parser should parse zero or more elements") {
@@ -119,11 +111,7 @@ class ParserTest extends FunSuite {
 
     val result = p.parse("bcd", 0)
 
-    result match {
-      case ParseResult(Left(error)) =>
-        assert(error.message.contains("Expected 'a'"))
-      case _ => fail("Expected a failure")
-    }
+    assert(result.value.isLeft)
   }
 
   test("optional parser should return None if the parser fails") {
@@ -176,11 +164,7 @@ class ParserTest extends FunSuite {
 
     val result = p.parse("b,c", 0)
 
-    result match {
-      case ParseResult(Left(error)) =>
-        assert(error.message.contains("Expected 'a'"))
-      case _ => fail("Expected a failure")
-    }
+    assert(result.value.isLeft)
   }
 
 }

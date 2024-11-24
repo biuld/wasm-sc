@@ -14,7 +14,10 @@ object ParseError:
     def context: Option[ParseContext] = e._2
 end ParseError
 
-case class Tok[A](val value: A, val start: Long, val end: Long)
+case class Tok[A](val value: A, val start: Long, val end: Long):
+  def map[B](f: A => B): Tok[B] =
+    Tok(f(value), start, end)
+end Tok
 
 case class ParseResult[A](value: Either[ParseError, (Tok[A], String)]):
   def map[B](f: ((Tok[A], String)) => (Tok[B], String)): ParseResult[B] =
@@ -44,21 +47,26 @@ end ParseResult
 
 case class Parser[A](f: (String, Long) => ParseResult[A]):
   def parse(input: String, position: Long = 0): ParseResult[A] =
-    f(input, position)
+    Parser.skipWhitespace.parse(input, position) match
+      case ParseResult(Right((_, remaining))) => f(remaining, position)
+      case ParseResult(Left(value))           => ParseResult(Left(value))
 
-  def map[B](ff: Tok[A] => Tok[B]): Parser[B] =
+  def map[B](ff: A => B): Parser[B] =
     Parser((input, position) =>
-      parse(input, position).map { case (tok, remaining) =>
-        (ff(tok), remaining)
-      }
+      for (tok, remaining) <- parse(input, position)
+      yield (tok.map(ff), remaining)
     )
 
-  def flatMap[B](ff: Tok[A] => Parser[B]): Parser[B] =
-    Parser((input, position) =>
-      parse(input, position).flatMap { case (tok, remaining) =>
-        ff(tok).parse(remaining, tok.end)
-      }
-    )
+  def flatMap[B](ff: A => Parser[B]): Parser[B] =
+    Parser { (input, position) =>
+      for
+        (Tok(value, start, end), remaining) <- parse(input, position)
+        (Tok(newValue, _, newEnd), newRemaining) <- ff(value).parse(
+          remaining,
+          end
+        )
+      yield (Tok(newValue, start, newEnd), newRemaining)
+    }
 
   def orElse(other: Parser[A]): Parser[A] =
     Parser((input, position) =>
@@ -71,10 +79,10 @@ end Parser
 object Parser:
   extension [A](p: Parser[A])
     infix def `>>`[B](other: Parser[B]): Parser[B] = p.flatMap(_ => other)
-    infix def `>>=`[B](ff: Tok[A] => Parser[B]): Parser[B] = p.flatMap(ff)
+    infix def `<<`[B](other: Parser[B]): Parser[A] = other.flatMap(_ => p)
+    infix def `>>=`[B](ff: A => Parser[B]): Parser[B] = p.flatMap(ff)
     infix def `<|>`(other: Parser[A]): Parser[A] = p.orElse(other)
-    infix def `$>`[B](b: B): Parser[B] =
-      p.map(tok => Tok(b, tok.start, tok.end))
+    infix def `$>`[B](b: B): Parser[B] = p.map(_ => b)
 
   private def formatError(
       input: String,
@@ -86,19 +94,21 @@ object Parser:
     val snippet = input.slice(start, end).replace("\n", "\\n")
     s"at position $position near: '$snippet'"
 
-  def char(c: Char): Parser[Char] =
+  def char(c: Char): Parser[Char] = char(_ == c)
+
+  def char(p: Char => Boolean): Parser[Char] =
     Parser((input, position) =>
       input.headOption match
-        case Some(head) if head == c =>
+        case Some(head) if p(head) =>
           ParseResult.success(Tok(head, position, position + 1), input.tail)
         case Some(_) =>
           ParseResult.failure(
-            s"Expected '$c'",
+            s"Expected character matching condition",
             Some(ParseContext("char", position, formatError(input, position)))
           )
         case None =>
           ParseResult.failure(
-            s"Expected '$c'",
+            s"Expected character matching condition",
             Some(ParseContext("char", position, formatError(input, position)))
           )
     )
@@ -117,25 +127,9 @@ object Parser:
         )
     )
 
-  def digit: Parser[Int] =
-    Parser((input, position) =>
-      input.headOption match
-        case Some(head) if head.isDigit =>
-          ParseResult.success(
-            Tok(head.asDigit, position, position + 1),
-            input.tail
-          )
-        case Some(_) =>
-          ParseResult.failure(
-            "Expected digit",
-            Some(ParseContext("digit", position, formatError(input, position)))
-          )
-        case None =>
-          ParseResult.failure(
-            "Expected digit",
-            Some(ParseContext("digit", position, formatError(input, position)))
-          )
-    )
+  def digitChar: Parser[Char] = char(_.isDigit)
+
+  def digit: Parser[Int] = digitChar.map(_.asDigit)
 
   def many[A](p: Parser[A]): Parser[List[A]] =
     Parser((input, position) =>
@@ -159,9 +153,9 @@ object Parser:
 
   def many1[A](p: Parser[A]): Parser[List[A]] =
     for
-      Tok(first, start, _) <- p
-      Tok(rest, _, end) <- many(p)
-    yield Tok(first :: rest, start, end)
+      first <- p
+      rest <- many(p)
+    yield first :: rest
 
   def optional[A](p: Parser[A]): Parser[Option[A]] =
     Parser((input, position) =>
@@ -182,34 +176,15 @@ object Parser:
 
   def sepBy1[A, S](p: Parser[A], sep: Parser[S]): Parser[List[A]] =
     for
-      Tok(first, start, _) <- p
-      Tok(rest, _, end) <- many(sep >> p)
-    yield Tok(first :: rest, start, end)
+      first <- p
+      rest <- many(sep >> p)
+    yield first :: rest
 
-  def whitespace: Parser[Char] =
-    Parser((input, position) =>
-      input.headOption match
-        case Some(head) if head.isWhitespace =>
-          ParseResult.success(Tok(head, position, position + 1), input.tail)
-        case Some(_) =>
-          ParseResult.failure(
-            "Expected whitespace",
-            Some(
-              ParseContext("whitespace", position, formatError(input, position))
-            )
-          )
-        case None =>
-          ParseResult.failure(
-            "Expected whitespace",
-            Some(
-              ParseContext("whitespace", position, formatError(input, position))
-            )
-          )
-    )
+  def whitespace: Parser[Char] = char(_.isWhitespace)
+
+  def letter: Parser[Char] = char(_.isLetter)
 
   def skipWhitespace: Parser[Unit] = many(whitespace) `$>` ()
-
-  def token[A](p: Parser[A]): Parser[A] = skipWhitespace >> p
 
   def eof: Parser[Unit] =
     Parser((input, position) =>
