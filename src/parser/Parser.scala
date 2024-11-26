@@ -47,9 +47,7 @@ end ParseResult
 
 case class Parser[A](f: (String, Long) => ParseResult[A]):
   def parse(input: String, position: Long = 0): ParseResult[A] =
-    Parser.skipWhitespace.parse(input, position) match
-      case ParseResult(Right((_, remaining))) => f(remaining, position)
-      case ParseResult(Left(value))           => ParseResult(Left(value))
+    f(input, position)
 
   def map[B](ff: A => B): Parser[B] =
     Parser((input, position) =>
@@ -185,6 +183,8 @@ object Parser:
   def letter: Parser[Char] = char(_.isLetter)
 
   def skipWhitespace: Parser[Unit] = many(whitespace) `$>` ()
+
+  def token[A](p: Parser[A]): Parser[A] = skipWhitespace >> p
 
   def eof: Parser[Unit] =
     Parser((input, position) =>

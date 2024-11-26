@@ -1,43 +1,128 @@
 package wasm.wat.syntax
 
-import wasm.wat.syntax.{ValType, Val}
-import wasm.wat.syntax.Val._
+enum Idx:
+  case U32(value: Int)
+  case Id(value: String)
 
-/** Represents WebAssembly instructions as a unified ADT */
-enum Instr:
-  // Control instructions
-  case Nop                          // No operation
-  case Block(label: Option[Name])   // A labeled block
-  case Loop(label: Option[Name])    // A labeled loop
-  case If                           // Conditional branch
-  case Else                         // Else branch
-  case End                          // End block or control structure
-  case Br(label: Name)              // Branch to a label
-  case BrIf(label: Name)            // Conditional branch to a label
-  case Call(index: Id)              // Call a function by index or name
-  case Return                       // Return from function
+type TableIdx = Idx
+type ElemIdx = Idx
+type LocalIdx = Idx
+type GlobalIdx = Idx
+type DataIdx = Idx
 
-  // Parametric instructions
-  case Drop                         // Drop the top value on the stack
-  case Select                       // Select between two values based on a condition
+enum Instruction:
+  case Block(
+      label: Option[String],
+      ty: Option[ValType],
+      body: List[Instruction]
+  )
+  case Loop(
+      label: Option[String],
+      ty: Option[ValType],
+      body: List[Instruction]
+  )
+  case If(
+      label: Option[String],
+      ty: Option[ValType],
+      thenBr: List[Instruction],
+      elseBr: List[Instruction]
+  )
 
-  // Variable instructions
-  case LocalGet(index: Id)          // Get a local variable
-  case LocalSet(index: Id)          // Set a local variable
-  case GlobalGet(index: Id)         // Get a global variable
-  case GlobalSet(index: Id)         // Set a global variable
+  case Unreachable
+  case Nop
+  case Br(l: Idx)
+  case BrIf(l: Idx)
+  case BrTable(l: List[Idx])
+  case Return
+  case Call(x: Idx)
+  case CallIndirect(x: Idx, y: Idx)
 
-  // Memory instructions
-  case Load(memType: ValType, offset: Int = 0, align: Int = 0)  // Load value from memory
-  case Store(memType: ValType, offset: Int = 0, align: Int = 0) // Store value to memory
+  case RefNull(vaxlue: HeapType)
+  case RefIsNull
+  case RefFunc(x: Idx)
 
-  // Numeric instructions
-  case Const(value: Val)            // Push constant to the stack
-  case Add(valType: ValType)        // Add two numbers
-  case Sub(valType: ValType)        // Subtract two numbers
-  case Mul(valType: ValType)        // Multiply two numbers
-  case Div(valType: ValType)        // Divide two numbers
-  case Eq(valType: ValType)         // Equality comparison
-  case Ne(valType: ValType)         // Not equal comparison
-  case Lt(valType: ValType)         // Less than
-  case Gt(valType: ValType)         // Greater than
+  case Drop
+  case Select(t: Option[ValType])
+
+  case LocalGet(x: LocalIdx)
+  case LocalSet(x: LocalIdx)
+  case LocalTee(x: LocalIdx)
+  case GlobalGet(x: GlobalIdx)
+  case GlobalSet(x: GlobalIdx)
+
+  case TableGet(x: TableIdx)
+  case TableSet(x: TableIdx)
+  case TableSize(x: TableIdx)
+  case TableGrow(x: TableIdx)
+  case TableFill(x: TableIdx)
+  case TableCopy(x: TableIdx, y: TableIdx)
+  case TableInit(x: TableIdx, y: ElemIdx)
+  case ElemDrop(x: ElemIdx)
+
+  case Load(
+      dataType: NumType,
+      isSigned: Boolean,
+      subWidth: Option[Int],
+      offset: Int,
+      align: Int
+  )
+  case Store(
+      dataType: NumType,
+      subWidth: Option[Int],
+      offset: Int,
+      align: Int
+  )
+  case MemorySize
+  case MemoryGrow
+  case MemoryFill
+  case MemoryCopy
+  case MemoryInit(x: DataIdx)
+  case DataDrop(x: DataIdx)
+
+  case UnaryOp(dataType: NumType, operation: UnaryOperation)
+  case BinaryOp(dataType: NumType, operation: BinaryOperation)
+  case ComparisonOp(dataType: NumType, operation: ComparisonOperation)
+  case ConversionOp(
+      fromType: NumType,
+      toType: NumType,
+      operation: ConversionOperation
+  )
+
+enum UnaryOperation:
+  case Clz, Ctz, Popcnt
+  case Abs, Neg, Ceil, Floor, Trunc, Nearest, Sqrt
+  case Extend8S, Extend16S, Extend32S
+
+enum BinaryOperation:
+  case Add, Sub, Mul
+  case DivS, DivU, RemS, RemU
+  case Div, Min, Max, CopySign
+
+  case And, Or, Xor
+
+  case Shl, ShrS, ShrU
+  case Rotl, Rotr
+
+enum ComparisonOperation:
+  case Eq, Ne
+  case LtS, LtU, GtS, GtU, LeS, LeU, GeS, GeU
+  case Lt, Gt, Le, Ge
+
+enum ConversionOperation:
+  case ConvertSI32ToF32, ConvertUI32ToF32, ConvertSI64ToF32, ConvertUI64ToF32
+  case ConvertSI32ToF64, ConvertUI32ToF64, ConvertSI64ToF64, ConvertUI64ToF64
+
+  case TruncSF32ToI32, TruncUF32ToI32, TruncSF64ToI32, TruncUF64ToI32
+  case TruncSF32ToI64, TruncUF32ToI64, TruncSF64ToI64, TruncUF64ToI64
+
+  case DemoteF64ToF32, PromoteF32ToF64
+
+  case ExtendSI32ToI64, ExtendUI32ToI64
+
+  case TruncSatSF32ToI32, TruncSatUF32ToI32
+  case TruncSatSF64ToI32, TruncSatUF64ToI32
+  case TruncSatSF32ToI64, TruncSatUF32ToI64
+  case TruncSatSF64ToI64, TruncSatUF64ToI64
+
+  case ReinterpretI32ToF32, ReinterpretI64ToF64
+  case ReinterpretF32ToI32, ReinterpretF64ToI64

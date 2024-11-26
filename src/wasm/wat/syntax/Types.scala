@@ -8,6 +8,9 @@ enum NumType:
 enum RefType:
   case FuncRef, ExternRef
 
+enum HeapType:
+  case Func, Extern
+
 /** Value types: either numeric or reference types */
 enum ValType:
   case Num(numType: NumType)       // Numeric type
