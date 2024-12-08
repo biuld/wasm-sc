@@ -10,10 +10,9 @@ import wasm.wat.parser.instr.param.paramInstr
 import wasm.wat.parser.instr.ref.refInstr
 import wasm.wat.parser.instr.table.tableInstr
 import wasm.wat.parser.instr.vari.varInstr
-import wasm.wat.syntax.Idx.*
-import wasm.wat.syntax.Instruction
+import wasm.wat.syntax.mod.Idx.*
+import wasm.wat.syntax.instr.Instruction
 
-def idx = idLit.map(Id(_)) <|> i32Lit.map(U32(_))
 
 def sign = (keyword("u") `$>` false) <|>
   (keyword("s") `$>` true)

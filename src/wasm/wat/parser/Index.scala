@@ -15,28 +15,30 @@ def i64Lit: Parser[Long] = for
   digits <- many1(digit)
 yield digits.mkString.toLong
 
-def f32Lit: Parser[Float] =
-  for
-    _ <- skipWhitespace
-    intPart <- many1(digit)
-    _ <- char('.')
-    fracPart <- many1(digit)
-  yield s"${intPart.mkString}.${fracPart.mkString}".toFloat
+def f32Lit: Parser[Float] = for
+  _ <- skipWhitespace
+  intPart <- many1(digit)
+  _ <- char('.')
+  fracPart <- many1(digit)
+yield s"${intPart.mkString}.${fracPart.mkString}".toFloat
 
-def f64Lit: Parser[Double] =
-  for
-    _ <- skipWhitespace
-    intPart <- many1(digit)
-    _ <- char('.')
-    fracPart <- many1(digit)
-  yield s"${intPart.mkString}.${fracPart.mkString}".toDouble
+def f64Lit: Parser[Double] = for
+  _ <- skipWhitespace
+  intPart <- many1(digit)
+  _ <- char('.')
+  fracPart <- many1(digit)
+yield s"${intPart.mkString}.${fracPart.mkString}".toDouble
 
-def idLit: Parser[String] =
-  for
-    _ <- skipWhitespace
-    _ <- char('$')
-    id <- many1(char(_.isUnicodeIdentifierPart))
-  yield id.mkString
+def idLit: Parser[String] = for
+  _ <- skipWhitespace
+  _ <- char('$')
+  id <- many1(char(_.isUnicodeIdentifierPart))
+yield id.mkString
+
+def stringLit: Parser[String] = for
+  _ <- skipWhitespace
+  xs <- many1(char(_.isUnicodeIdentifierPart))
+yield xs.mkString
 
 def keyword(k: String): Parser[Unit] = token(string(k) `$>` ())
 def lparen: Parser[Unit] = keyword("(")

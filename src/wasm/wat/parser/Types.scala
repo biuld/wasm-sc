@@ -4,7 +4,7 @@ import common.parser.*
 import common.parser.Parser
 import common.parser.Parser.*
 import wasm.wat.parser.*
-import wasm.wat.syntax.*
+import wasm.wat.syntax.types.*
 
 def numType =
   (keyword("i32") `$>` NumType.I32) <|>

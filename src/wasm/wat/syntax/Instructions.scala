@@ -1,14 +1,7 @@
-package wasm.wat.syntax
+package wasm.wat.syntax.instr
 
-enum Idx:
-  case U32(value: Int)
-  case Id(value: String)
-
-type TableIdx = Idx
-type ElemIdx = Idx
-type LocalIdx = Idx
-type GlobalIdx = Idx
-type DataIdx = Idx
+import wasm.wat.syntax.types.*
+import wasm.wat.syntax.mod.*
 
 enum Instruction:
   case Block(

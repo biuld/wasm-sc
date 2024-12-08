@@ -1,9 +1,9 @@
 package wasm.wat.parser.instr.table
 
 import wasm.wat.parser.*
-import wasm.wat.parser.instr.idx
+import wasm.wat.parser.mod.idx
 import wasm.wat.syntax.*
-import wasm.wat.syntax.Instruction.*
+import wasm.wat.syntax.instr.Instruction.*
 
 
 def tableGet = for

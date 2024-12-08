@@ -1,13 +1,12 @@
 package wasm.wat.parser.instr.mem
 
-import wasm.wat.parser.keyword
-import wasm.wat.parser.instr.idx
-import wasm.wat.parser.instr.sign
-import wasm.wat.syntax.Instruction.*
-import wasm.wat.syntax.Instruction
-import wasm.wat.parser.types.numType
 import common.parser.Parser.optional
 import wasm.wat.parser.i32Lit
+import wasm.wat.parser.instr.sign
+import wasm.wat.parser.keyword
+import wasm.wat.parser.mod.idx
+import wasm.wat.parser.types.numType
+import wasm.wat.syntax.instr.Instruction.*
 
 def memCopy = keyword("memory.copy") `$>` MemoryCopy
 

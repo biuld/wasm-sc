@@ -1,9 +1,9 @@
 package wasm.wat.parser.instr.ref
 
 import wasm.wat.parser.*
-import wasm.wat.parser.instr.idx
+import wasm.wat.parser.mod.idx
 import wasm.wat.parser.types.*
-import wasm.wat.syntax.Instruction.*
+import wasm.wat.syntax.instr.Instruction.*
 
 def refNull = for
   _ <- keyword("ref.null")

@@ -2,11 +2,11 @@ package wasm.wat.parser.instr.control
 
 import common.parser.Parser.*
 import wasm.wat.parser.*
-import wasm.wat.parser.instr.idx
 import wasm.wat.parser.instr.expr
+import wasm.wat.parser.mod.idx
 import wasm.wat.parser.types.*
-import wasm.wat.syntax.Idx.*
-import wasm.wat.syntax.Instruction.*
+import wasm.wat.syntax.instr.Instruction.*
+import wasm.wat.syntax.mod.Idx.*
 
 def block = for
   _ <- keyword("block")

@@ -7,20 +7,10 @@ import wasm.wat.parser.i64Lit
 import wasm.wat.parser.instr.sign
 import wasm.wat.parser.keyword
 import wasm.wat.parser.types.numType
-import wasm.wat.syntax.BinaryOp
-import wasm.wat.syntax.ComparisonOp
-import wasm.wat.syntax.ConversionOp
-import wasm.wat.syntax.FloatBinaryOp
-import wasm.wat.syntax.FloatComparisonOp
-import wasm.wat.syntax.FloatUnaryOp
-import wasm.wat.syntax.Instruction.*
-import wasm.wat.syntax.IntBinaryOp
-import wasm.wat.syntax.IntComparisonOp
-import wasm.wat.syntax.IntUnaryOp
-import wasm.wat.syntax.NumType
-import wasm.wat.syntax.UnaryOp
-import wasm.wat.syntax.Val
-import wasm.wat.syntax.ValType.Num
+import wasm.wat.syntax.instr.*
+import wasm.wat.syntax.instr.Instruction.*
+import wasm.wat.syntax.types.NumType
+import wasm.wat.syntax.types.ValType.Num
 
 def intUnaryOp =
   (keyword("clz") `$>` IntUnaryOp.Clz) <|>

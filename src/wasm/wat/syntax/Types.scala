@@ -1,4 +1,4 @@
-package wasm.wat.syntax
+package wasm.wat.syntax.types
 
 /** Numeric types in WebAssembly */
 enum NumType:

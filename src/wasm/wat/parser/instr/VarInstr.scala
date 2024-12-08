@@ -1,8 +1,8 @@
 package wasm.wat.parser.instr.vari
 
 import wasm.wat.parser.*
-import wasm.wat.parser.instr.idx
-import wasm.wat.syntax.Instruction.*
+import wasm.wat.parser.mod.idx
+import wasm.wat.syntax.instr.Instruction.*
 
 def localGet = for
   _ <- keyword("local.get")

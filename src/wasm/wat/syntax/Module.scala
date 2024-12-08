@@ -1,8 +1,23 @@
-package wasm.wat.syntax
+package wasm.wat.syntax.mod
+
+import wasm.wat.syntax.types.*
+import wasm.wat.syntax.instr.*
+
+enum Idx:
+  case U32(value: Int)
+  case Id(value: String)
+
+type TableIdx = Idx
+type ElemIdx = Idx
+type LocalIdx = Idx
+type GlobalIdx = Idx
+type DataIdx = Idx
+type FuncIdx = Idx
+type MemIdx = Idx
 
 /** Represents a WAT module */
 case class Module(
-    types: List[FuncType], // Function types
+    types: List[(Option[String], FuncType)], // Function types
     imports: List[Import], // Import declarations
     funcs: List[Func], // Function definitions
     tables: List[Table], // Table definitions
@@ -23,14 +38,14 @@ case class Import(
 
 /** Import description */
 enum ImportDesc:
-  case Func(typeIdx: Int) // Function type index
+  case Func(typeIdx: FuncIdx) // Function type index
   case Table(tableType: TableType) // Table type
   case Mem(memType: MemType) // Memory type
   case Global(globalType: GlobalType) // Global type
 
 /** Represents a function */
 case class Func(
-    typeIdx: Int, // Function type index
+    typeIdx: FuncIdx, // Function type index
     locals: List[ValType], // Local variable types
     body: List[Instruction] // Function body as a list of instructions
 )
@@ -59,26 +74,26 @@ case class Export(
 
 /** Export description */
 enum ExportDesc:
-  case Func(funcIdx: Int) // Function index
-  case Table(tableIdx: Int) // Table index
-  case Mem(memIdx: Int) // Memory index
-  case Global(globalIdx: Int) // Global index
+  case Func(funcIdx: FuncIdx) // Function index
+  case Table(tableIdx: TableIdx) // Table index
+  case Mem(memIdx: MemIdx) // Memory index
+  case Global(globalIdx: GlobalIdx) // Global index
 
 /** Represents the start function */
 case class Start(
-    funcIdx: Int // Index of the start function
+    funcIdx: FuncIdx // Index of the start function
 )
 
 /** Represents an element segment */
 case class Elem(
-    tableIdx: Int, // Table index
+    tableIdx: ElemIdx, // Table index
     offset: Expr, // Offset expression
-    init: List[Int] // List of function indices to initialize the table
+    init: List[FuncIdx] // List of function indices to initialize the table
 )
 
 /** Represents a data segment */
 case class Data(
-    memIdx: Int, // Memory index
+    memIdx: MemIdx, // Memory index
     offset: Expr, // Offset expression
     init: List[Byte] // Data to initialize memory
 )
