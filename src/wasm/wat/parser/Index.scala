@@ -37,7 +37,9 @@ yield id.mkString
 
 def stringLit: Parser[String] = for
   _ <- skipWhitespace
-  xs <- many1(char(_.isUnicodeIdentifierPart))
+  _ <- keyword("\"")
+  xs <- many1(char(_.isValidChar))
+  _ <- keyword("\"")
 yield xs.mkString
 
 def keyword(k: String): Parser[Unit] = token(string(k) `$>` ())
