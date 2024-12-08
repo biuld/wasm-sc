@@ -1,5 +1,5 @@
 import munit.FunSuite
-import parser._
+import common.parser._
 
 class ParserTest extends FunSuite {
 
@@ -144,7 +144,9 @@ class ParserTest extends FunSuite {
     }
   }
 
-  test("sepBy1 parser should correctly parse elements separated by another parser") {
+  test(
+    "sepBy1 parser should correctly parse elements separated by another parser"
+  ) {
     val p = Parser.sepBy1(Parser.char('a'), Parser.char(','))
 
     val result = p.parse("a,a,a", 0)

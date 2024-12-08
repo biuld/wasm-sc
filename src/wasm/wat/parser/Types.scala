@@ -1,16 +1,24 @@
-package wasm.wat.parser
+package wasm.wat.parser.types
 
-import parser._
-import parser.Parser._
-import wasm.wat.syntax._
+import common.parser.*
+import common.parser.Parser
+import common.parser.Parser.*
+import wasm.wat.parser.*
+import wasm.wat.syntax.*
+
+def numType =
+  (keyword("i32") `$>` NumType.I32) <|>
+    (keyword("i64") `$>` NumType.I64) <|>
+    (keyword("f32") `$>` NumType.F32) <|>
+    (keyword("f64") `$>` NumType.F64)
+
+def refType =
+  (keyword("funcref") `$>` RefType.FuncRef) <|>
+    (keyword("externref") `$>` RefType.ExternRef)
 
 def valType: Parser[ValType] =
-  (keyword("i32") `$>` ValType.Num(NumType.I32)) <|>
-    (keyword("i64") `$>` ValType.Num(NumType.I64)) <|>
-    (keyword("f32") `$>` ValType.Num(NumType.F32)) <|>
-    (keyword("f64") `$>` ValType.Num(NumType.F64)) <|>
-    (keyword("funcref") `$>` ValType.Ref(RefType.FuncRef)) <|>
-    (keyword("externref") `$>` ValType.Ref(RefType.ExternRef))
+  (numType.map(ValType.Num(_))) <|>
+    (refType.map(ValType.Ref(_)))
 
 def funcType: Parser[FuncType] =
   val params =
@@ -63,10 +71,6 @@ def memType: Parser[MemType] =
     _ <- rparen
   yield MemType(lim)
 
-def refType: Parser[RefType] =
-  (keyword("funcref") `$>` RefType.FuncRef) <|>
-    (keyword("externref") `$>` RefType.ExternRef)
-
 def tableType: Parser[TableType] =
   for
     _ <- lparen
@@ -88,3 +92,7 @@ def globalType: Parser[GlobalType] =
     mut <- mutability
     _ <- rparen
   yield GlobalType(valType, mut)
+
+def heapType =
+  (keyword("func") `$>` HeapType.Func) <|>
+    (keyword("extern") `$>` HeapType.Extern)

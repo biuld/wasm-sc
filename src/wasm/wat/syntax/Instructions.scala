@@ -37,7 +37,7 @@ enum Instruction:
   case Call(x: Idx)
   case CallIndirect(x: Idx, y: Idx)
 
-  case RefNull(vaxlue: HeapType)
+  case RefNull(value: HeapType)
   case RefIsNull
   case RefFunc(x: Idx)
 
@@ -61,7 +61,7 @@ enum Instruction:
 
   case Load(
       dataType: NumType,
-      isSigned: Boolean,
+      sign: Option[Boolean],
       subWidth: Option[Int],
       offset: Int,
       align: Int
@@ -79,50 +79,65 @@ enum Instruction:
   case MemoryInit(x: DataIdx)
   case DataDrop(x: DataIdx)
 
-  case UnaryOp(dataType: NumType, operation: UnaryOperation)
-  case BinaryOp(dataType: NumType, operation: BinaryOperation)
-  case ComparisonOp(dataType: NumType, operation: ComparisonOperation)
-  case ConversionOp(
-      fromType: NumType,
-      toType: NumType,
-      operation: ConversionOperation
+  case Const(ty: NumType, v: Val)
+  case Unary(ty: NumType, op: UnaryOp)
+  case Binary(ty: NumType, op: BinaryOp)
+  case Comparison(ty: NumType, op: ComparisonOp)
+  case Conversion(
+      from: NumType,
+      to: NumType,
+      op: ConversionOp,
+      sign: Option[Boolean]
   )
 
-enum UnaryOperation:
+enum Val:
+  case I32(value: Int)
+  case I64(value: Long)
+  case F32(value: Float)
+  case F64(value: Double)
+
+enum IntUnaryOp:
   case Clz, Ctz, Popcnt
-  case Abs, Neg, Ceil, Floor, Trunc, Nearest, Sqrt
   case Extend8S, Extend16S, Extend32S
 
-enum BinaryOperation:
+enum IntBinaryOp:
   case Add, Sub, Mul
   case DivS, DivU, RemS, RemU
-  case Div, Min, Max, CopySign
-
   case And, Or, Xor
+  case Shl, ShrS, ShrU, Rotl, Rotr
 
-  case Shl, ShrS, ShrU
-  case Rotl, Rotr
-
-enum ComparisonOperation:
-  case Eq, Ne
+enum IntComparisonOp:
+  case Eq, EqZ, Ne
   case LtS, LtU, GtS, GtU, LeS, LeU, GeS, GeU
-  case Lt, Gt, Le, Ge
 
-enum ConversionOperation:
-  case ConvertSI32ToF32, ConvertUI32ToF32, ConvertSI64ToF32, ConvertUI64ToF32
-  case ConvertSI32ToF64, ConvertUI32ToF64, ConvertSI64ToF64, ConvertUI64ToF64
+enum FloatUnaryOp:
+  case Abs, Neg, Ceil, Floor, Trunc, Nearest, Sqrt
 
-  case TruncSF32ToI32, TruncUF32ToI32, TruncSF64ToI32, TruncUF64ToI32
-  case TruncSF32ToI64, TruncUF32ToI64, TruncSF64ToI64, TruncUF64ToI64
+enum FloatBinaryOp:
+  case Add, Sub, Mul, Div
+  case Min, Max, CopySign
 
-  case DemoteF64ToF32, PromoteF32ToF64
+enum FloatComparisonOp:
+  case Eq, Ne, Lt, Gt, Le, Ge
 
-  case ExtendSI32ToI64, ExtendUI32ToI64
+enum UnaryOp:
+  case IntOp(op: IntUnaryOp)
+  case FloatOp(op: FloatUnaryOp)
 
-  case TruncSatSF32ToI32, TruncSatUF32ToI32
-  case TruncSatSF64ToI32, TruncSatUF64ToI32
-  case TruncSatSF32ToI64, TruncSatUF32ToI64
-  case TruncSatSF64ToI64, TruncSatUF64ToI64
+enum BinaryOp:
+  case IntOp(op: IntBinaryOp)
+  case FloatOp(op: FloatBinaryOp)
 
-  case ReinterpretI32ToF32, ReinterpretI64ToF64
-  case ReinterpretF32ToI32, ReinterpretF64ToI64
+enum ComparisonOp:
+  case IntOp(op: IntComparisonOp)
+  case FloatOp(op: FloatComparisonOp)
+
+enum ConversionOp:
+  case Wrap
+  case Extend
+  case Trunc
+  case TruncSat
+  case Convert
+  case Demote
+  case Promote
+  case Reinterpret

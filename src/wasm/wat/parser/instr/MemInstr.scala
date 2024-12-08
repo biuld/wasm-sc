@@ -1,0 +1,65 @@
+package wasm.wat.parser.instr.mem
+
+import wasm.wat.parser.keyword
+import wasm.wat.parser.instr.idx
+import wasm.wat.parser.instr.sign
+import wasm.wat.syntax.Instruction.*
+import wasm.wat.syntax.Instruction
+import wasm.wat.parser.types.numType
+import common.parser.Parser.optional
+import wasm.wat.parser.i32Lit
+
+def memCopy = keyword("memory.copy") `$>` MemoryCopy
+
+def memSize = keyword("memory.size") `$>` MemorySize
+
+def memFill = keyword("memory.fill") `$>` MemoryFill
+
+def memGrow = keyword("memory.grow") `$>` MemoryGrow
+
+def memInit = for
+  _ <- keyword("memory.init")
+  x <- idx
+yield MemoryInit(x)
+
+def dataDrop = for
+  _ <- keyword("data.drop")
+  x <- idx
+yield DataDrop(x)
+
+def subWith = (keyword("8") `$>` 8) <|>
+  (keyword("16") `$>` 16) <|>
+  (keyword("32") `$>` 32)
+
+def load = for
+  ty <- numType
+  _ <- keyword(".")
+  swOpt <- optional:
+    for
+      w <- subWith
+      _ <- keyword("_")
+      s <- sign
+    yield (w, s)
+  (wOpt, sOpt) = swOpt match
+    case None         => (None, None)
+    case Some((w, s)) => (Some(w), Some(s))
+  o <- i32Lit
+  a <- i32Lit
+yield Load(ty, sOpt, wOpt, o, a)
+
+def store = for
+  ty <- numType
+  sOpt <- optional(subWith)
+  _ <- keyword(".")
+  o <- i32Lit
+  a <- i32Lit
+yield Store(ty, sOpt, o, a)
+
+def memInstr = load <|>
+  store <|>
+  memSize <|>
+  memGrow <|>
+  memFill <|>
+  memCopy <|>
+  memInit <|>
+  dataDrop

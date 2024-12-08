@@ -1,4 +1,4 @@
-package parser
+package common.parser
 
 import scala.annotation.targetName
 
@@ -185,6 +185,8 @@ object Parser:
   def skipWhitespace: Parser[Unit] = many(whitespace) `$>` ()
 
   def token[A](p: Parser[A]): Parser[A] = skipWhitespace >> p
+
+  def choice[A](ps: List[Parser[A]]) = ps.reduce(_ <|> _)
 
   def eof: Parser[Unit] =
     Parser((input, position) =>
