@@ -1,6 +1,9 @@
 package common.parser
 
 import scala.annotation.targetName
+import scala.util.Try
+import scala.util.Failure
+import scala.util.Success
 
 case class ParseContext(parserName: String, position: Long, snippet: String)
 
@@ -35,14 +38,33 @@ case class ParseResult[A](value: Either[ParseError, (Tok[A], String)]):
 end ParseResult
 
 object ParseResult:
+  def formatError(
+      input: String,
+      position: Long,
+      context: Int = 5
+  ): String =
+    val start = math.max(0, position.toInt - context)
+    val end = math.min(input.length, position.toInt + context)
+    val snippet = input.slice(start, end).replace("\n", "\\n")
+    s"at position $position near: '$snippet'"
+
   def success[A](tok: Tok[A], remaining: String): ParseResult[A] =
     ParseResult(Right(tok, remaining))
 
-  def failure[A](s: String, context: Option[ParseContext]): ParseResult[A] =
-    ParseResult(Left(ParseError(s, context)))
-
-  def failure[A](err: ParseError): ParseResult[A] =
-    ParseResult(Left(err))
+  def failure[A](
+      msg: String,
+      input: String,
+      position: Long,
+      parserName: String = "unnamed parser"
+  ): ParseResult[A] =
+    ParseResult(
+      Left(
+        ParseError(
+          msg,
+          Some(ParseContext(parserName, position, formatError(input, position)))
+        )
+      )
+    )
 end ParseResult
 
 case class Parser[A](f: (String, Long) => ParseResult[A]):
@@ -51,19 +73,29 @@ case class Parser[A](f: (String, Long) => ParseResult[A]):
 
   def map[B](ff: A => B): Parser[B] =
     Parser((input, position) =>
-      for (tok, remaining) <- parse(input, position)
-      yield (tok.map(ff), remaining)
+      parse(input, position) match
+        case ParseResult(Left(e)) => ParseResult(Left(e))
+        case ParseResult(Right((tok, remaining))) =>
+          Try(tok.map(ff)) match
+            case Failure(ex) =>
+              ParseResult.failure(ex.getMessage(), input, position)
+            case Success(v) => ParseResult.success(v, remaining)
     )
 
   def flatMap[B](ff: A => Parser[B]): Parser[B] =
     Parser { (input, position) =>
-      for
-        (Tok(value, start, end), remaining) <- parse(input, position)
-        (Tok(newValue, _, newEnd), newRemaining) <- ff(value).parse(
-          remaining,
-          end
-        )
-      yield (Tok(newValue, start, newEnd), newRemaining)
+      parse(input, position) match
+        case ParseResult(Right((Tok(value, start, end), remaining))) =>
+          Try(ff(value)) match
+            case Success(p) =>
+              for (Tok(newValue, _, newEnd), newRemaining) <- p.parse(
+                  remaining,
+                  end
+                )
+              yield (Tok(newValue, start, newEnd), newRemaining)
+            case Failure(ex) =>
+              ParseResult.failure(ex.getMessage(), input, position)
+        case ParseResult(Left(e)) => ParseResult(Left(e))
     }
 
   def orElse(other: Parser[A]): Parser[A] =
@@ -82,16 +114,6 @@ object Parser:
     infix def `<|>`(other: Parser[A]): Parser[A] = p.orElse(other)
     infix def `$>`[B](b: B): Parser[B] = p.map(_ => b)
 
-  private def formatError(
-      input: String,
-      position: Long,
-      context: Int = 5
-  ): String =
-    val start = math.max(0, position.toInt - context)
-    val end = math.min(input.length, position.toInt + context)
-    val snippet = input.slice(start, end).replace("\n", "\\n")
-    s"at position $position near: '$snippet'"
-
   def char(c: Char): Parser[Char] = char(_ == c)
 
   def char(p: Char => Boolean): Parser[Char] =
@@ -102,12 +124,16 @@ object Parser:
         case Some(_) =>
           ParseResult.failure(
             s"Expected character matching condition",
-            Some(ParseContext("char", position, formatError(input, position)))
+            input,
+            position,
+            "char"
           )
         case None =>
           ParseResult.failure(
             s"Expected character matching condition",
-            Some(ParseContext("char", position, formatError(input, position)))
+            input,
+            position,
+            "char"
           )
     )
 
@@ -121,7 +147,9 @@ object Parser:
       else
         ParseResult.failure(
           s"Expected '$s'",
-          Some(ParseContext("string", position, formatError(input, position)))
+          input,
+          position,
+          "string"
         )
     )
 
@@ -195,7 +223,9 @@ object Parser:
       else
         ParseResult.failure(
           "Expected end of input",
-          Some(ParseContext("eof", position, formatError(input, position)))
+          input,
+          position,
+          "eof"
         )
     )
 end Parser
