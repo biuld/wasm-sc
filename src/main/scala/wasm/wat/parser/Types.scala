@@ -61,6 +61,7 @@ def limits: Parser[Limits] =
   for
     min <- i32Lit
     max <- optional(i32Lit)
+    if max.forall(_ >= min)
   yield Limits(min, max)
 
 def memType: Parser[MemType] =

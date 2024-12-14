@@ -12,7 +12,7 @@ import wasm.wat.parser.instr.table.tableInstr
 import wasm.wat.parser.instr.vari.varInstr
 import wasm.wat.syntax.mod.Idx.*
 import wasm.wat.syntax.instr.Instruction
-
+import common.parser.Parser.optional
 
 def sign = (keyword("u") `$>` false) <|>
   (keyword("s") `$>` true)
@@ -27,17 +27,13 @@ def instr: Parser[Instruction] =
     numInstr
 
 def expr: Parser[List[Instruction]] =
-  def plain = for
-    _ <- lparen
-    i <- instr
-    _ <- rparen
+  def atom = for i <- instr
   yield i :: Nil
 
-  def nested = for
+  def list: Parser[List[Instruction]] = for
     _ <- lparen
-    i <- instr
     xs <- many(expr)
     _ <- rparen
-  yield i :: xs.flatten
+  yield xs.flatten
 
-  plain <|> nested
+  atom <|> list

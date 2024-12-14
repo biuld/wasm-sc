@@ -140,34 +140,24 @@ def reinterpret = for
 yield Conversion(from, to, ConversionOp.Reinterpret, None)
 
 def extend = for
-  _ <- keyword("i63.extend_i32_")
+  _ <- keyword("i64.extend_i32_")
   s <- sign
 yield Conversion(NumType.I32, NumType.I64, ConversionOp.Extend, Some(s))
 
-def conversionOp =
-  (keyword("wrap") `$>` ConversionOp.Wrap) <|>
-    (keyword("extend") `$>` ConversionOp.Extend) <|>
-    (keyword("trunc") `$>` ConversionOp.Trunc) <|>
-    (keyword("trunc_sat") `$>` ConversionOp.TruncSat) <|>
-    (keyword("convert") `$>` ConversionOp.Convert) <|>
-    (keyword("demote") `$>` ConversionOp.Demote) <|>
-    (keyword("promote") `$>` ConversionOp.Promote) <|>
-    (keyword("reinterpret") `$>` ConversionOp.Reinterpret)
-
-def primVal = i32Lit.map(Val.I32(_)) <|>
-  i64Lit.map(Val.I64(_)) <|>
-  f32Lit.map(Val.F32(_)) <|>
-  f64Lit.map(Val.F64(_))
-
 def const = for
   ty <- numType
-  _ <- keyword(".")
-  v <- primVal
+  _ <- keyword(".const")
+  v <- ty match
+    case NumType.I32 => i32Lit.map(Val.I32(_))
+    case NumType.I64 => i64Lit.map(Val.I64(_))
+    case NumType.F32 => f32Lit.map(Val.F32(_))
+    case NumType.F64 => f64Lit.map(Val.F64(_))
 yield Const(ty, v)
 
 def unary =
   (for
     ty <- numType
+    _ <- keyword(".")
     op <- unaryOp
   yield Unary(ty, op)) <|>
     (keyword("i32.extend8_s") `$>` Unary(
@@ -193,14 +183,17 @@ def unary =
 
 def binary = for
   ty <- numType
+  _ <- keyword(".")
   op <- binaryOp
 yield Binary(ty, op)
 
 def comparison = for
   ty <- numType
+  _ <- keyword(".")
   op <- comparisonOp
 yield Comparison(ty, op)
 
-def conversion = wrap <|> extend <|> trunc <|> truncSat <|> convert <|> demote <|> promote <|> reinterpret
+def conversion =
+  wrap <|> extend <|> trunc <|> truncSat <|> convert <|> demote <|> promote <|> reinterpret
 
-def numInstr = const <|> unary <|> binary <|> comparison <|> conversion
+def numInstr = const <|> binary <|> comparison <|> conversion <|> unary

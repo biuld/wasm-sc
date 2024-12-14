@@ -32,7 +32,7 @@ def subWith = (keyword("8") `$>` 8) <|>
 
 def load = for
   ty <- numType
-  _ <- keyword(".")
+  _ <- keyword(".load")
   swOpt <- optional:
     for
       w <- subWith
@@ -48,17 +48,21 @@ yield Load(ty, sOpt, wOpt, o, a)
 
 def store = for
   ty <- numType
-  sOpt <- optional(subWith)
-  _ <- keyword(".")
+  _ <- keyword(".store")
+  sOpt <- optional:
+    for
+      _ <- keyword("_")
+      s <- subWith
+    yield s
   o <- i32Lit
   a <- i32Lit
 yield Store(ty, sOpt, o, a)
 
-def memInstr = load <|>
-  store <|>
+def memInstr = memInit <|>
+  memCopy <|>
+  memFill <|>
   memSize <|>
   memGrow <|>
-  memFill <|>
-  memCopy <|>
-  memInit <|>
-  dataDrop
+  dataDrop <|>
+  load <|>
+  store

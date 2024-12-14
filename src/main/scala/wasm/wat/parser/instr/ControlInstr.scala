@@ -8,33 +8,41 @@ import wasm.wat.parser.types.*
 import wasm.wat.syntax.instr.Instruction.*
 import wasm.wat.syntax.mod.Idx.*
 
+def blockType = for
+  _ <- lparen
+  _ <- keyword("result")
+  ty <- valType
+  _ <- rparen
+yield ty
+
 def block = for
   _ <- keyword("block")
   label <- optional(idLit)
-  ty <- optional(valType)
-  body <- many(expr)
+  ty <- optional(blockType)
+  body <- expr
   _ <- keyword("end")
-yield Block(label, ty, body.flatten)
+yield Block(label, ty, body)
 
 def loop = for
   _ <- keyword("loop")
   label <- optional(idLit)
-  ty <- optional(valType)
-  body <- many(expr)
+  ty <- optional(blockType)
+  body <- expr
   _ <- keyword("end")
-yield Loop(label, ty, body.flatten)
+yield Loop(label, ty, body)
 
 def ifThen = for
   _ <- keyword("if")
   label <- optional(idLit)
-  ty <- optional(valType)
-  thenBr <- many(expr)
+  ty <- optional(blockType)
+  thenBr <- expr
   elseBr <- optional:
-    for _ <- keyword("else") 
-    xs <- many(expr)
-    yield xs.flatten
+    for
+      _ <- keyword("else")
+      xs <- expr
+    yield xs
   _ <- keyword("end")
-yield If(label, ty, thenBr.flatten, elseBr.toList.flatten)
+yield If(label, ty, thenBr, elseBr.toList.flatten)
 
 def br = for
   _ <- keyword("br")
@@ -59,6 +67,7 @@ def call = for
 yield Call(x)
 
 def callIndirect = for
+  _ <- keyword("call_indirect")
   x <- idx
   y <- idx
 yield CallIndirect(x, y)

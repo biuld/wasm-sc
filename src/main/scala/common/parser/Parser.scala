@@ -72,7 +72,7 @@ case class Parser[A](f: (String, Long) => ParseResult[A]):
     f(input, position)
 
   def map[B](ff: A => B): Parser[B] =
-    Parser((input, position) =>
+    Parser { (input, position) =>
       parse(input, position) match
         case ParseResult(Left(e)) => ParseResult(Left(e))
         case ParseResult(Right((tok, remaining))) =>
@@ -80,11 +80,12 @@ case class Parser[A](f: (String, Long) => ParseResult[A]):
             case Failure(ex) =>
               ParseResult.failure(ex.getMessage(), input, position)
             case Success(v) => ParseResult.success(v, remaining)
-    )
+    }
 
   def flatMap[B](ff: A => Parser[B]): Parser[B] =
     Parser { (input, position) =>
       parse(input, position) match
+        case ParseResult(Left(e)) => ParseResult(Left(e))
         case ParseResult(Right((Tok(value, start, end), remaining))) =>
           Try(ff(value)) match
             case Success(p) =>
@@ -95,15 +96,32 @@ case class Parser[A](f: (String, Long) => ParseResult[A]):
               yield (Tok(newValue, start, newEnd), newRemaining)
             case Failure(ex) =>
               ParseResult.failure(ex.getMessage(), input, position)
-        case ParseResult(Left(e)) => ParseResult(Left(e))
     }
 
   def orElse(other: Parser[A]): Parser[A] =
-    Parser((input, position) =>
+    Parser { (input, position) =>
       parse(input, position) match
         case ParseResult(Left(_)) => other.parse(input, position)
         case success              => success
-    )
+    }
+
+  def withFilter(predicate: A => Boolean): Parser[A] =
+    Parser { (input, position) =>
+      parse(input, position) match
+        case ParseResult(Left(e)) => ParseResult(Left(e))
+        case r @ ParseResult(Right((Tok(value, _, _), _))) =>
+          Try(predicate(value)) match
+            case Failure(ex) =>
+              ParseResult.failure(ex.getMessage(), input, position)
+            case Success(v) =>
+              if v then r
+              else
+                ParseResult.failure(
+                  s"Value [$value] did not satisfy the predicate",
+                  input,
+                  position
+                )
+    }
 end Parser
 
 object Parser:
