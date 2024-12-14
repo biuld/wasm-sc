@@ -35,12 +35,34 @@ def idLit: Parser[String] = for
   id <- many1(char(_.isUnicodeIdentifierPart))
 yield id.mkString
 
-def stringLit: Parser[String] = for
-  _ <- skipWhitespace
-  _ <- keyword("\"")
-  xs <- many1(char(_.isValidChar))
-  _ <- keyword("\"")
-yield xs.mkString
+def stringLit: Parser[String] =
+  def escapeSeq =
+    (char('n') `$>` "\n") <|>
+      (char('t') `$>` "\t") <|>
+      (char('r') `$>` "\r") <|>
+      (char('\\') `$>` "\\") <|>
+      (char('"') `$>` "\"") <|>
+      (char('u') >> unicodeEscape)
+
+  def hexChar =
+    char(c => c.isDigit || ('a' to 'f').contains(c) || ('A' to 'F').contains(c))
+
+  def unicodeEscape = for
+    _ <- char('{')
+    digits <- many1(hexChar)
+    _ <- char('}')
+    hexStr = digits.mkString
+    codePoint = Integer.parseInt(hexStr, 16)
+  yield String(Character.toChars(codePoint))
+
+  for
+    _ <- skipWhitespace
+    _ <- char('"')
+    xs <- many:
+      char(c => c != '"' && c != '\\').map(_.toString) <|>
+        (char('\\') >> escapeSeq)
+    _ <- char('"')
+  yield xs.mkString
 
 def keyword(k: String): Parser[Unit] = token(string(k) `$>` ())
 def lparen: Parser[Unit] = keyword("(")
