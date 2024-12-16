@@ -5,7 +5,7 @@ import wasm.wat.syntax.instr.Instruction.*
 import wasm.wat.syntax.types.*
 import wasm.wat.syntax.mod.Idx.*
 
-class RefInstrTest extends FunSuite {
+class RefInstrTest extends FunSuite:
 
   test("refNull parses ref.null with func heap type correctly") {
     val input = "ref.null func"
@@ -93,4 +93,4 @@ class RefInstrTest extends FunSuite {
     val result = refInstr.parse(input)
     assert(result.value.isLeft)
   }
-}
+end RefInstrTest

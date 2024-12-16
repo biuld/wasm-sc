@@ -4,7 +4,7 @@ import wasm.wat.syntax.types.*
 import common.parser.*
 
 
-class TypeTest extends FunSuite {
+class TypeTest extends FunSuite:
 
   test("numType parses i32 correctly") {
     val input = "i32"
@@ -114,4 +114,4 @@ class TypeTest extends FunSuite {
     val result = heapType.parse(input)
     assertEquals(result, ParseResult.success(Tok(HeapType.Extern, 0, 6), ""))
   }
-}
+end TypeTest

@@ -4,7 +4,7 @@ import wasm.wat.parser.instr.param.*
 import wasm.wat.syntax.instr.Instruction.*
 import wasm.wat.syntax.types.*
 
-class ParamInstrTest extends FunSuite {
+class ParamInstrTest extends FunSuite:
 
   test("drop parses drop instruction correctly") {
     val input = "drop"
@@ -59,4 +59,4 @@ class ParamInstrTest extends FunSuite {
     val result = paramInstr.parse(input)
     assert(result.value.isLeft)
   }
-}
+end ParamInstrTest

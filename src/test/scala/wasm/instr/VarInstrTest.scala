@@ -4,7 +4,7 @@ import wasm.wat.parser.instr.vari.*
 import wasm.wat.syntax.instr.Instruction.*
 import wasm.wat.syntax.mod.Idx.*
 
-class VarInstrTest extends FunSuite {
+class VarInstrTest extends FunSuite:
 
   test("localGet parses local.get with numeric index correctly") {
     val input = "local.get 3"
@@ -119,4 +119,5 @@ class VarInstrTest extends FunSuite {
     val result = varInstr.parse(input)
     assert(result.value.isLeft)
   }
-}
+
+end VarInstrTest

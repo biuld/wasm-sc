@@ -1,12 +1,13 @@
 import common.parser.*
 import munit.FunSuite
 import wasm.wat.parser.instr.control.*
+import wasm.wat.parser.instr.*
 import wasm.wat.syntax.instr.*
 import wasm.wat.syntax.instr.Instruction.*
 import wasm.wat.syntax.mod.Idx.*
 import wasm.wat.syntax.types.*
 
-class ControlInstrParserTests extends FunSuite {
+class ControlInstrTests extends FunSuite:
 
   test("controlInstr parses block correctly") {
     val input = "block $label (result i32) (i32.const 42) end"
@@ -28,7 +29,7 @@ class ControlInstrParserTests extends FunSuite {
     )
   }
 
-    test("controlInstr parses block correctly") {
+  test("controlInstr parses block correctly") {
     val input = "block $label i32.const 42 end"
     val result = block.parse(input)
     assertEquals(
@@ -204,4 +205,32 @@ class ControlInstrParserTests extends FunSuite {
       )
     )
   }
-}
+
+  test("parse simple atom expression") {
+    val input = "i32.const 42"
+    val result = expr.parse(input)
+    assertEquals(
+      result,
+      ParseResult.success(
+        Tok(Const(NumType.I32, Val.I32(42)) :: Nil, 0, input.length),
+        ""
+      )
+    )
+  }
+
+  test("parse nested list expression") {
+    val input = "(drop (call $foo) (i32.const 42))"
+    val result = expr.parse(input)
+    assertEquals(
+      result,
+      ParseResult.success(
+        Tok(
+          Const(NumType.I32, Val.I32(42)) :: Call(Id("foo")) :: Drop :: Nil,
+          0,
+          input.length
+        ),
+        ""
+      )
+    )
+  }
+end ControlInstrTests

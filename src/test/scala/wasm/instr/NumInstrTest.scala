@@ -5,7 +5,7 @@ import wasm.wat.syntax.instr.Instruction.*
 import wasm.wat.syntax.types.*
 import wasm.wat.syntax.instr.*
 
-class NumInstrTest extends FunSuite {
+class NumInstrTest extends FunSuite:
 
   // Test for constant instructions
   test("numInstr parses i32.const correctly") {
@@ -219,4 +219,4 @@ class NumInstrTest extends FunSuite {
     val result = numInstr.parse(input)
     assert(result.value.isLeft)
   }
-}
+end NumInstrTest

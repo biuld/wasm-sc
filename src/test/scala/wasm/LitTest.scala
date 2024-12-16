@@ -2,7 +2,7 @@ import munit.FunSuite
 import common.parser.*
 import wasm.wat.parser.*
 
-class LitTest extends FunSuite {
+class LitTest extends FunSuite:
 
   test("i32Lit should parse 32-bit integers") {
     val input = "  12345"
@@ -165,4 +165,4 @@ class LitTest extends FunSuite {
         fail(s"Failed to parse: ${error.message}, context: ${error.context}")
     }
   }
-}
+end LitTest

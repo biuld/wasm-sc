@@ -17,7 +17,7 @@ type MemIdx = Idx
 
 /** Represents a WAT module */
 case class Module(
-    types: List[(Option[String], FuncType)], // Function types
+    types: List[Named[FuncType]], // Function types
     imports: List[Import], // Import declarations
     funcs: List[Func], // Function definitions
     tables: List[Table], // Table definitions
@@ -43,11 +43,18 @@ enum ImportDesc:
   case Mem(memType: MemType) // Memory type
   case Global(globalType: GlobalType) // Global type
 
+case class Named[T](name: Option[String], value: T)
+
 /** Represents a function */
 case class Func(
-    typeIdx: FuncIdx, // Function type index
-    locals: List[ValType], // Local variable types
-    body: List[Instruction] // Function body as a list of instructions
+    id: Option[String],
+    imports: Option[(String, String)],
+    exports: List[String],
+    ty: Option[FuncIdx],
+    params: List[Named[ValType]],
+    results: List[ValType],
+    locals: List[Named[ValType]],
+    body: List[Instruction]
 )
 
 /** Represents a table */

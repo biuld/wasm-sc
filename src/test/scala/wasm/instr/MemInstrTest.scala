@@ -9,7 +9,7 @@ import munit.FunSuite
 import wasm.wat.parser._
 import wasm.wat.syntax._
 
-class MemInstrTest extends FunSuite {
+class MemInstrTest extends FunSuite:
 
   test("Parse memory.copy") {
     val input = "memory.copy"
@@ -88,4 +88,4 @@ class MemInstrTest extends FunSuite {
       Right((Tok(Store(I32, Some(16), 0, 4), 0, input.length), ""))
     )
   }
-}
+end MemInstrTest

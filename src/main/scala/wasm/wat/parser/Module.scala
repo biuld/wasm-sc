@@ -8,6 +8,8 @@ import wasm.wat.syntax.mod.*
 import wasm.wat.syntax.mod.Idx.*
 import common.parser.Parser.digitChar
 import common.parser.Parser.optional
+import common.parser.Parser
+import wasm.wat.syntax.types.ValType
 
 def idx = idLit.map(Id(_)) <|> i32Lit.map(U32(_))
 
@@ -73,7 +75,7 @@ def exportDesc =
 
   func <|> table <|> mem <|> global
 
-def importP = for
+def imports = for
   _ <- lparen
   _ <- keyword("import")
   module <- stringLit
@@ -82,14 +84,65 @@ def importP = for
   _ <- rparen
 yield Import(module, name, desc)
 
-def func = for
-  _ <- lparen
-  _ <- keyword("func")
-  t <- idx
-  locals <- many(valType)
-  body <- many(expr)
-  _ <- rparen
-yield Func(t, locals, body.flatten)
+def func =
+  def namedValType(keywordStr: String): Parser[List[Named[ValType]]] = for
+    _ <- lparen
+    _ <- keyword(keywordStr)
+    namedTys <- many:
+      for
+        idOpt <- optional(idLit)
+        ty <- valType
+      yield Named(idOpt, ty)
+    _ <- rparen
+  yield namedTys
+
+  val local: Parser[List[Named[ValType]]] = namedValType("local")
+  val params: Parser[List[Named[ValType]]] = namedValType("param")
+
+  val results: Parser[List[ValType]] = for
+    _ <- lparen
+    _ <- keyword("result")
+    tys <- many(valType)
+    _ <- rparen
+  yield tys
+
+  val imports: Parser[(String, String)] = for
+    _ <- lparen
+    _ <- keyword("import")
+    mod <- stringLit
+    m <- stringLit
+    _ <- rparen
+  yield (mod, m)
+
+  val exports: Parser[List[String]] = for
+    _ <- lparen
+    _ <- keyword("export")
+    ns <- many(stringLit)
+    _ <- rparen
+  yield ns
+
+  for
+    _ <- lparen
+    _ <- keyword("func")
+    id <- optional(idLit)
+    imOpt <- optional(imports)
+    exOpt <- many(exports)
+    tyOpt <- optional(idx)
+    pOpt <- many(params)
+    rOpt <- many(results)
+    locals <- many(local)
+    body <- optional(expr)
+    _ <- rparen
+  yield Func(
+    id,
+    imOpt,
+    exOpt.flatten,
+    tyOpt,
+    pOpt.flatten,
+    rOpt.flatten,
+    locals.flatten,
+    body.toList.flatten
+  )
 
 def table = for
   _ <- lparen
@@ -113,7 +166,7 @@ def global = for
   _ <- rparen
 yield Global(t, init)
 
-def exportP = for
+def exports = for
   _ <- lparen
   _ <- keyword("export")
   name <- stringLit
@@ -146,24 +199,24 @@ def data = for
   _ <- rparen
 yield Data(memIdx, offset, init.toList.map(_.toByte))
 
-def typeP = for
+def types = for
   _ <- lparen
   _ <- keyword("type")
   idOpt <- optional(idLit)
   ty <- funcType
   _ <- rparen
-yield (idOpt, ty)
+yield Named(idOpt, ty)
 
 def module = for
   _ <- lparen
   _ <- keyword("module")
-  types <- many(typeP)
-  imports <- many(importP)
+  types <- many(types)
+  imports <- many(imports)
   funcs <- many(func)
   tables <- many(table)
   mems <- many(mem)
   globals <- many(global)
-  exports <- many(exportP)
+  exports <- many(exports)
   start <- optional(start)
   elems <- many(elem)
   datas <- many(data)

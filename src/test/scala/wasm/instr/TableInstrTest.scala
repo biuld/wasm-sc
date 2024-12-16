@@ -4,7 +4,7 @@ import wasm.wat.parser.instr.table.*
 import wasm.wat.syntax.instr.Instruction.*
 import wasm.wat.syntax.mod.Idx.*
 
-class TableInstrTest extends FunSuite {
+class TableInstrTest extends FunSuite:
 
   test("tableGet parses table.get with numeric index correctly") {
     val input = "table.get 0"
@@ -182,4 +182,4 @@ class TableInstrTest extends FunSuite {
     val result = tableInstr.parse(input)
     assert(result.value.isLeft)
   }
-}
+end TableInstrTest
