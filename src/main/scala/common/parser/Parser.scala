@@ -7,14 +7,22 @@ import scala.util.Success
 
 case class ParseContext(parserName: String, position: Long, snippet: String)
 
-opaque type ParseError = (String, Option[ParseContext])
+opaque type ParseError = (String, Option[ParseContext], List[String])
 object ParseError:
-  def apply(message: String, context: Option[ParseContext] = None): ParseError =
-    (message, context)
+  def apply(
+      message: String,
+      context: Option[ParseContext] = None,
+      stack: List[String] = List.empty
+  ): ParseError =
+    (message, context, stack)
 
   extension (e: ParseError)
     def message: String = e._1
     def context: Option[ParseContext] = e._2
+    def stack: List[String] = e._3
+
+    def withStack(parserName: String): ParseError =
+      (e._1, e._2, parserName :: e._3)
 end ParseError
 
 case class Tok[A](val value: A, val start: Long, val end: Long):
@@ -22,19 +30,24 @@ case class Tok[A](val value: A, val start: Long, val end: Long):
     Tok(f(value), start, end)
 end Tok
 
-case class ParseResult[A](value: Either[ParseError, (Tok[A], String)]):
+case class ParseResult[A](
+    value: Either[ParseError, (Tok[A], String)],
+    debugInfo: List[String] = List.empty
+):
   def map[B](f: ((Tok[A], String)) => (Tok[B], String)): ParseResult[B] =
     value match
-      case Left(err) => ParseResult(Left(err))
+      case Left(err) => ParseResult(Left(err), debugInfo)
       case Right(result) =>
         val (tok, remaining) = result
         val (newTok, newRemaining) = f(tok, remaining)
-        ParseResult.success(newTok, newRemaining)
+        ParseResult.success(newTok, newRemaining, debugInfo)
 
   def flatMap[B](f: ((Tok[A], String)) => ParseResult[B]): ParseResult[B] =
     value match
-      case Left(err)     => ParseResult(Left(err))
-      case Right(result) => f(result)
+      case Left(err) => ParseResult(Left(err), debugInfo)
+      case Right(result) =>
+        val nextResult = f(result)
+        nextResult.copy(debugInfo = debugInfo ++ nextResult.debugInfo)
 end ParseResult
 
 object ParseResult:
@@ -48,78 +61,143 @@ object ParseResult:
     val snippet = input.slice(start, end).replace("\n", "\\n")
     s"at position $position near: '$snippet'"
 
-  def success[A](tok: Tok[A], remaining: String): ParseResult[A] =
-    ParseResult(Right(tok, remaining))
+  def success[A](
+      tok: Tok[A],
+      remaining: String,
+      debugInfo: List[String] = List.empty
+  ): ParseResult[A] =
+    ParseResult(Right(tok, remaining), debugInfo)
 
   def failure[A](
       msg: String,
       input: String,
       position: Long,
-      parserName: String = "unnamed parser"
+      parserName: String = "unnamed parser",
+      debugInfo: List[String] = List.empty
   ): ParseResult[A] =
     ParseResult(
       Left(
         ParseError(
           msg,
-          Some(ParseContext(parserName, position, formatError(input, position)))
+          Some(
+            ParseContext(parserName, position, formatError(input, position))
+          ),
+          List(parserName)
         )
-      )
+      ),
+      debugInfo
     )
 end ParseResult
 
 case class Parser[A](f: (String, Long) => ParseResult[A]):
-  def parse(input: String, position: Long = 0): ParseResult[A] =
-    f(input, position)
+  def parse(
+      input: String,
+      position: Long = 0
+  ): ParseResult[A] =
+    val debug = sys.env
+      .get("DEBUG_PARSER")
+      .map(_.equalsIgnoreCase("true"))
+      .getOrElse(false)
+    val result = f(input, position)
+    if debug then
+      val debugMessage = result.value match
+        case Right((Tok(value, start, end), remaining)) =>
+          s"Parser succeeded: value='$value', start=$start, end=$end, remaining='$remaining'"
+        case Left(error) =>
+          s"Parser failed: message='${error.message}', position=$position"
+      result.copy(debugInfo = result.debugInfo :+ debugMessage)
+    else result
 
   def map[B](ff: A => B): Parser[B] =
     Parser { (input, position) =>
-      parse(input, position) match
-        case ParseResult(Left(e)) => ParseResult(Left(e))
-        case ParseResult(Right((tok, remaining))) =>
+      val result = parse(input, position)
+      result.value match
+        case Left(e) => ParseResult(Left(e), result.debugInfo)
+        case Right((tok, remaining)) =>
           Try(tok.map(ff)) match
             case Failure(ex) =>
-              ParseResult.failure(ex.getMessage(), input, position)
-            case Success(v) => ParseResult.success(v, remaining)
+              ParseResult.failure(
+                ex.getMessage(),
+                input,
+                position,
+                debugInfo = result.debugInfo
+              )
+            case Success(v) =>
+              ParseResult.success(v, remaining, result.debugInfo)
     }
 
   def flatMap[B](ff: A => Parser[B]): Parser[B] =
     Parser { (input, position) =>
-      parse(input, position) match
-        case ParseResult(Left(e)) => ParseResult(Left(e))
-        case ParseResult(Right((Tok(value, start, end), remaining))) =>
+      val result = parse(input, position)
+      result.value match
+        case Left(e) => ParseResult(Left(e), result.debugInfo)
+        case Right((Tok(value, start, end), remaining)) =>
           Try(ff(value)) match
             case Success(p) =>
-              for (Tok(newValue, _, newEnd), newRemaining) <- p.parse(
-                  remaining,
-                  end
-                )
-              yield (Tok(newValue, start, newEnd), newRemaining)
+              val nextResult = p.parse(remaining, end)
+              nextResult.value match
+                case Right(
+                      (Tok(nextValue, nextStart, nextEnd), nextRemaining)
+                    ) =>
+                  // Ensure start and end are consistent
+                  ParseResult.success(
+                    Tok(nextValue, start, nextEnd),
+                    nextRemaining,
+                    result.debugInfo ++ nextResult.debugInfo
+                  )
+                case Left(err) =>
+                  ParseResult(
+                    Left(err),
+                    result.debugInfo ++ nextResult.debugInfo
+                  )
             case Failure(ex) =>
-              ParseResult.failure(ex.getMessage(), input, position)
+              ParseResult.failure(
+                ex.getMessage(),
+                input,
+                position,
+                debugInfo = result.debugInfo
+              )
     }
 
   def orElse(other: Parser[A]): Parser[A] =
     Parser { (input, position) =>
-      parse(input, position) match
-        case ParseResult(Left(_)) => other.parse(input, position)
-        case success              => success
+      val result = parse(input, position)
+      result.value match
+        case Left(_) =>
+          val otherResult = other.parse(input, position)
+          otherResult.copy(debugInfo =
+            result.debugInfo ++ otherResult.debugInfo
+          )
+        case success => result
     }
 
   def withFilter(predicate: A => Boolean): Parser[A] =
     Parser { (input, position) =>
-      parse(input, position) match
-        case ParseResult(Left(e)) => ParseResult(Left(e))
-        case r @ ParseResult(Right((Tok(value, _, _), _))) =>
+      val result = parse(input, position)
+      result.value match
+        case Left(e) => ParseResult(Left(e), result.debugInfo)
+        case Right((Tok(value, start, end), remaining)) =>
           Try(predicate(value)) match
             case Failure(ex) =>
-              ParseResult.failure(ex.getMessage(), input, position)
+              ParseResult.failure(
+                ex.getMessage(),
+                input,
+                position,
+                debugInfo = result.debugInfo
+              )
             case Success(v) =>
-              if v then r
+              if v then
+                ParseResult.success(
+                  Tok(value, start, end),
+                  remaining,
+                  result.debugInfo
+                )
               else
                 ParseResult.failure(
                   s"Value [$value] did not satisfy the predicate",
                   input,
-                  position
+                  position,
+                  debugInfo = result.debugInfo
                 )
     }
 end Parser
@@ -185,11 +263,11 @@ object Parser:
 
       while keepParsing do
         p.parse(currentInput, currentPos) match
-          case ParseResult(Right((Tok(value, start, end), remaining))) =>
+          case ParseResult(Right((Tok(value, start, end), remaining)), _) =>
             acc = acc :+ value
             currentInput = remaining
             currentPos = end
-          case ParseResult(Left(_)) =>
+          case ParseResult(Left(_), _) =>
             keepParsing = false
 
       ParseResult.success(Tok(acc, startPos, currentPos), currentInput)
@@ -204,12 +282,12 @@ object Parser:
   def optional[A](p: Parser[A]): Parser[Option[A]] =
     Parser((input, position) =>
       p.parse(input, position) match
-        case ParseResult(Right((tok, remaining))) =>
+        case ParseResult(Right((tok, remaining)), _) =>
           ParseResult.success(
             Tok(Some(tok.value), tok.start, tok.end),
             remaining
           )
-        case ParseResult(Left(_)) =>
+        case ParseResult(Left(_), _) =>
           ParseResult.success(Tok(None, position, position), input)
     )
 

@@ -14,7 +14,7 @@ class FuncTest extends FunSuite:
     assertEquals(
       result,
       ParseResult.success(
-        Tok(Func(None, None, Nil, None, Nil, Nil, Nil, Nil), 0, input.length),
+        Tok(Func(None, None, Nil, EMPTY_TYPE_USE, Nil, Nil), 0, input.length),
         ""
       )
     )
@@ -27,7 +27,7 @@ class FuncTest extends FunSuite:
       result,
       ParseResult.success(
         Tok(
-          Func(None, None, "f" :: Nil, None, Nil, Nil, Nil, Nil),
+          Func(None, None, "f" :: Nil, EMPTY_TYPE_USE, Nil, Nil),
           0,
           input.length
         ),
@@ -43,7 +43,7 @@ class FuncTest extends FunSuite:
       result,
       ParseResult.success(
         Tok(
-          Func(Some("f"), None, Nil, None, Nil, Nil, Nil, Nil),
+          Func(Some("f"), None, Nil, EMPTY_TYPE_USE, Nil, Nil),
           0,
           input.length
         ),
@@ -63,9 +63,7 @@ class FuncTest extends FunSuite:
             Some("h"),
             None,
             "g" :: Nil,
-            None,
-            Nil,
-            Nil,
+            EMPTY_TYPE_USE,
             Nil,
             Nil
           ),
@@ -88,9 +86,7 @@ class FuncTest extends FunSuite:
             None,
             None,
             Nil,
-            None,
-            Nil,
-            Nil,
+            EMPTY_TYPE_USE,
             List(Named(None, ValType.Num(NumType.I32))),
             Nil
           ),
@@ -113,9 +109,7 @@ class FuncTest extends FunSuite:
             None,
             None,
             Nil,
-            None,
-            Nil,
-            Nil,
+            EMPTY_TYPE_USE,
             Named(None, ValType.Num(NumType.I32)) ::
               Named(None, ValType.Num(NumType.F64)) ::
               Named(None, ValType.Num(NumType.I64)) ::

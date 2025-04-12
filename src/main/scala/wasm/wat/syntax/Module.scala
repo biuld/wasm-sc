@@ -38,27 +38,34 @@ case class Import(
 
 /** Import description */
 enum ImportDesc:
-  case Func(typeIdx: FuncIdx) // Function type index
+  case Func(typeIdx: FuncIdx, typeUse: TypeUse) // Function type index
   case Table(tableType: TableType) // Table type
   case Mem(memType: MemType) // Memory type
   case Global(globalType: GlobalType) // Global type
 
-case class Named[T](name: Option[String], value: T)
+case class Named[T](name: Option[Idx], value: T)
+
+case class TypeUse(
+    id: Option[Idx], // Type index
+    params: List[ValType], // Parameter types
+    results: List[ValType] // Result types
+)
+
+def EMPTY_TYPE_USE: TypeUse = TypeUse(None, Nil, Nil)
 
 /** Represents a function */
 case class Func(
     id: Option[String],
     imports: Option[(String, String)],
     exports: List[String],
-    ty: Option[FuncIdx],
-    params: List[Named[ValType]],
-    results: List[ValType],
+    typeUse: TypeUse,
     locals: List[Named[ValType]],
     body: List[Instruction]
 )
 
 /** Represents a table */
 case class Table(
+    idx: Option[TableIdx],
     tableType: TableType // Table type
 )
 

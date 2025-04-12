@@ -10,6 +10,7 @@ import common.parser.Parser.digitChar
 import common.parser.Parser.optional
 import common.parser.Parser
 import wasm.wat.syntax.types.ValType
+import wasm.wat.syntax.types.FuncType
 
 def idx = idLit.map(Id(_)) <|> i32Lit.map(U32(_))
 
@@ -17,9 +18,10 @@ def importDesc =
   def func = for
     _ <- lparen
     _ <- keyword("func")
-    f <- idx
+    id <- idx
+    tu <- typeUse
     _ <- rparen
-  yield ImportDesc.Func(f)
+  yield ImportDesc.Func(id, tu)
 
   def table = for
     _ <- lparen
@@ -85,27 +87,6 @@ def imports = for
 yield Import(module, name, desc)
 
 def func =
-  def namedValType(keywordStr: String): Parser[List[Named[ValType]]] = for
-    _ <- lparen
-    _ <- keyword(keywordStr)
-    namedTys <- many:
-      for
-        idOpt <- optional(idLit)
-        ty <- valType
-      yield Named(idOpt, ty)
-    _ <- rparen
-  yield namedTys
-
-  val local: Parser[List[Named[ValType]]] = namedValType("local")
-  val params: Parser[List[Named[ValType]]] = namedValType("param")
-
-  val results: Parser[List[ValType]] = for
-    _ <- lparen
-    _ <- keyword("result")
-    tys <- many(valType)
-    _ <- rparen
-  yield tys
-
   val imports: Parser[(String, String)] = for
     _ <- lparen
     _ <- keyword("import")
@@ -127,9 +108,7 @@ def func =
     id <- optional(idLit)
     imOpt <- optional(imports)
     exOpt <- many(exports)
-    tyOpt <- optional(idx)
-    pOpt <- many(params)
-    rOpt <- many(results)
+    tuOpt <- optional(typeUse)
     locals <- many(local)
     body <- optional(expr)
     _ <- rparen
@@ -137,9 +116,7 @@ def func =
     id,
     imOpt,
     exOpt.flatten,
-    tyOpt,
-    pOpt.flatten,
-    rOpt.flatten,
+    tuOpt.getOrElse(EMPTY_TYPE_USE),
     locals.flatten,
     body.toList.flatten
   )
@@ -147,9 +124,10 @@ def func =
 def table = for
   _ <- lparen
   _ <- keyword("table")
+  idOpt <- optional(idx)
   t <- tableType
   _ <- rparen
-yield Table(t)
+yield Table(idOpt, t)
 
 def mem = for
   _ <- lparen
@@ -202,10 +180,56 @@ yield Data(memIdx, offset, init.toList.map(_.toByte))
 def types = for
   _ <- lparen
   _ <- keyword("type")
-  idOpt <- optional(idLit)
+  idOpt <- optional(idx)
   ty <- funcType
   _ <- rparen
 yield Named(idOpt, ty)
+
+def namedValType(keywordStr: String): Parser[List[Named[ValType]]] = for
+  _ <- lparen
+  _ <- keyword(keywordStr)
+  namedTys <- many:
+    for
+      idOpt <- optional(idx)
+      ty <- valType
+    yield Named(idOpt, ty)
+  _ <- rparen
+yield namedTys
+
+def local = namedValType("local")
+
+def params = for
+  _ <- lparen
+  _ <- keyword("param")
+  tys <- many(valType)
+  _ <- rparen
+yield tys
+
+val results: Parser[List[ValType]] = for
+  _ <- lparen
+  _ <- keyword("result")
+  tys <- many(valType)
+  _ <- rparen
+yield tys
+
+def typeUse: Parser[TypeUse] =
+  def implicits = for
+    _ <- lparen
+    _ <- keyword("type")
+    idOpt <- optional(idx)
+    _ <- rparen
+  yield TypeUse(idOpt, Nil, Nil)
+
+  def explicits = for
+    _ <- lparen
+    _ <- keyword("type")
+    idOpt <- optional(idx)
+    _ <- rparen
+    ps <- many(params)
+    rs <- many(results)
+  yield TypeUse(idOpt, ps.flatten, rs.flatten)
+
+  implicits <|> explicits
 
 def module = for
   _ <- lparen
